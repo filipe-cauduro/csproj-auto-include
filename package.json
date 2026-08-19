@@ -1,9 +1,17 @@
 {
   "name": "csproj-auto-include",
   "displayName": "CSProj Auto Include",
-  "description": "Automatically import newly created files into a .csproj file",
-  "version": "0.0.2",
+  "description": "Automates the tedious process of manually maintaining your .csproj files",
+  "version": "1.0.0",
   "license": "MIT",
+  "author": {
+    "name": "filipe-cauduro",
+    "url": "https://github.com/filipe-cauduro"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/filipe-cauduro/csproj-auto-include.git"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },

@@ -76,5 +76,5 @@ If you are using this code in your own project, please give credit by including 
 ```markdown
 **CSProj Auto Include**  
 Original code by Filipe. Licensed under the MIT License.  
-[https://github.com/your-username/csproj-auto-include]
+[https://github.com/filipe-cauduro/csproj-auto-include]
 ```
