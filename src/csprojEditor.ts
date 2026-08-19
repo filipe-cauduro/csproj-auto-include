@@ -30,21 +30,33 @@ export function addTagToCsproj(csprojText: string, tag: string, includePath: str
         ) {
             // Found a group with the same tag. Insert before its closing tag.
             const insertPos = lastItemGroupEndIndex - "</ItemGroup>".length
-            
+
             let whitespaceBeforeEndTag = ""
             let wsPos = insertPos - 1
-            while (wsPos >= 0 && (csprojText[wsPos] === " " || csprojText[wsPos] === "\t" || csprojText[wsPos] === "\r")) {
+            while (
+                wsPos >= 0 &&
+                (csprojText[wsPos] === " " || csprojText[wsPos] === "\t" || csprojText[wsPos] === "\r")
+            ) {
                 whitespaceBeforeEndTag = csprojText[wsPos] + whitespaceBeforeEndTag
                 wsPos--
             }
 
             if (csprojText[wsPos] === "\n") {
                 return (
-                    csprojText.slice(0, wsPos + 1) + newElement + whitespaceBeforeEndTag + "</ItemGroup>" + csprojText.slice(lastItemGroupEndIndex)
+                    csprojText.slice(0, wsPos + 1) +
+                    newElement +
+                    whitespaceBeforeEndTag +
+                    "</ItemGroup>" +
+                    csprojText.slice(lastItemGroupEndIndex)
                 )
             } else {
                 return (
-                    csprojText.slice(0, insertPos) + "\n" + newElement + whitespaceBeforeEndTag + "</ItemGroup>" + csprojText.slice(lastItemGroupEndIndex)
+                    csprojText.slice(0, insertPos) +
+                    "\n" +
+                    newElement +
+                    whitespaceBeforeEndTag +
+                    "</ItemGroup>" +
+                    csprojText.slice(lastItemGroupEndIndex)
                 )
             }
         }
@@ -83,20 +95,20 @@ export function addTagToCsproj(csprojText: string, tag: string, includePath: str
 export function removeTagFromCsproj(text: string, includePath: string): string {
     const includeStr = `Include="${includePath}"`
     let includeIndex = text.indexOf(includeStr)
-    
-    while(includeIndex !== -1) {
-        const startTagIndex = text.lastIndexOf('<', includeIndex)
+
+    while (includeIndex !== -1) {
+        const startTagIndex = text.lastIndexOf("<", includeIndex)
         if (startTagIndex === -1) break
-        
+
         let lineStartIndex = startTagIndex
-        while (lineStartIndex > 0 && (text[lineStartIndex - 1] === ' ' || text[lineStartIndex - 1] === '\t')) {
+        while (lineStartIndex > 0 && (text[lineStartIndex - 1] === " " || text[lineStartIndex - 1] === "\t")) {
             lineStartIndex--
         }
-        
-        let endTagIndex = text.indexOf('>', includeIndex)
+
+        let endTagIndex = text.indexOf(">", includeIndex)
         if (endTagIndex === -1) break
-        
-        if (text[endTagIndex - 1] !== '/') {
+
+        if (text[endTagIndex - 1] !== "/") {
             const tagMatch = text.substring(startTagIndex, endTagIndex).match(/<([a-zA-Z0-9_]+)/)
             if (tagMatch) {
                 const tagName = tagMatch[1]
@@ -107,35 +119,35 @@ export function removeTagFromCsproj(text: string, includePath: string): string {
                 }
             }
         }
-        
+
         let endRemoveIndex = endTagIndex + 1
-        if (text[endRemoveIndex] === '\r') endRemoveIndex++
-        if (text[endRemoveIndex] === '\n') endRemoveIndex++
-        
+        if (text[endRemoveIndex] === "\r") endRemoveIndex++
+        if (text[endRemoveIndex] === "\n") endRemoveIndex++
+
         text = text.substring(0, lineStartIndex) + text.substring(endRemoveIndex)
-        
+
         // Remove empty item groups
-        text = text.replace(/^[ \t]*<ItemGroup>\s*<\/ItemGroup>[ \t]*\r?\n?/gm, '')
-        
+        text = text.replace(/^[ \t]*<ItemGroup>\s*<\/ItemGroup>[ \t]*\r?\n?/gm, "")
+
         includeIndex = text.indexOf(includeStr)
     }
-    
+
     return text
 }
 
 export function removeTagsByPrefix(text: string, prefixPath: string): string {
     const includeRegex = /<([a-zA-Z0-9_]+)\s+[^>]*Include="([^"]+)"/g
-    let match;
-    const pathsToRemove: string[] = [];
+    let match
+    const pathsToRemove: string[] = []
     while ((match = includeRegex.exec(text)) !== null) {
-        const includeValue = match[2];
+        const includeValue = match[2]
         if (includeValue.startsWith(prefixPath)) {
-            pathsToRemove.push(includeValue);
+            pathsToRemove.push(includeValue)
         }
     }
-    
+
     for (const p of pathsToRemove) {
-        text = removeTagFromCsproj(text, p);
+        text = removeTagFromCsproj(text, p)
     }
-    return text;
+    return text
 }

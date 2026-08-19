@@ -4,6 +4,10 @@ import { csprojPaths } from "./workspaceState"
 import { handleNewFile, handleDeletedFile, handleRenamedFile } from "./handlers"
 
 export async function activate(context: vscode.ExtensionContext) {
+    const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+    if (config.get<boolean>("showNotifications")) {
+        vscode.window.showInformationMessage("Auto Import to CSProj is active!");
+    }
     // Initial load
     const uris = await vscode.workspace.findFiles("**/*.csproj")
     for (const uri of uris) {
@@ -67,13 +71,21 @@ export async function activate(context: vscode.ExtensionContext) {
         })
 
         for (const file of event.files) {
+            let isDirectory = false
             try {
                 const stat = await vscode.workspace.fs.stat(file.newUri)
-                if (stat.type === vscode.FileType.Directory) {
+                isDirectory = stat.type === vscode.FileType.Directory
+            } catch (e) {
+                // If stat fails (e.g., file locked during rename), assume it's a file
+                isDirectory = false
+            }
+
+            try {
+                if (isDirectory) {
                     await walkDirectory(file.newUri, async (childNewUri) => {
                         const relativePath = path.relative(file.newUri.fsPath, childNewUri.fsPath)
                         const childOldUri = vscode.Uri.file(path.join(file.oldUri.fsPath, relativePath))
-                        
+
                         const ext = path.extname(childNewUri.fsPath).toLowerCase()
                         const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
                         const tag = fileMappings[ext] || fileMappings[extWithoutDot]
@@ -88,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     await handleRenamedFile(file.oldUri.fsPath, file.newUri.fsPath, tag)
                 }
             } catch (e) {
-                // ignore
+                // ignore errors during processing
             }
         }
     })

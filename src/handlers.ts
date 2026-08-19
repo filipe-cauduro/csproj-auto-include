@@ -40,10 +40,7 @@ export async function handleNewFile(filePath: string, tag: string) {
 
         if (newCsprojText !== csprojText) {
             const edit = new vscode.WorkspaceEdit()
-            const fullRange = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(csprojText.length)
-            )
+            const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(csprojText.length))
             edit.replace(csprojUri, fullRange, newCsprojText)
             await vscode.workspace.applyEdit(edit)
             await document.save()
@@ -90,10 +87,7 @@ export async function handleDeletedFile(filePath: string) {
 
         if (newCsprojText !== csprojText) {
             const edit = new vscode.WorkspaceEdit()
-            const fullRange = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(csprojText.length)
-            )
+            const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(csprojText.length))
             edit.replace(csprojUri, fullRange, newCsprojText)
             await vscode.workspace.applyEdit(edit)
             await document.save()
@@ -159,6 +153,15 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
                 edit.replace(csprojUri, fullRange, csprojText)
                 await vscode.workspace.applyEdit(edit)
                 await document.save()
+                const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+                if (config.get<boolean>("showNotifications")) {
+                    vscode.window.showInformationMessage(`Successfully updated ${path.basename(csprojUri.fsPath)}!`);
+                }
+            } else {
+                const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+                if (config.get<boolean>("showNotifications")) {
+                    vscode.window.showInformationMessage(`No changes needed in ${path.basename(csprojUri.fsPath)}.`);
+                }
             }
         } catch (err) {
             console.error("Error modifying csproj on rename", err)
@@ -170,6 +173,12 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
         }
         if (newClosestCsproj && newTag) {
             await handleNewFile(newFilePath, newTag)
+        }
+        if (!oldClosestCsproj && !newClosestCsproj) {
+            const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+            if (config.get<boolean>("showNotifications")) {
+                vscode.window.showWarningMessage(`Could not find a .csproj for ${path.basename(oldFilePath)} or ${path.basename(newFilePath)}`);
+            }
         }
     }
 }

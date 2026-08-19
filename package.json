@@ -11,8 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onWorkspaceContains:**/*.csproj",
-    "onWorkspaceContains:**/*.sln"
+    "onStartupFinished"
   ],
   "main": "./build/extension.js",
   "contributes": {
@@ -25,6 +24,11 @@
             ".cs": "Compile"
           },
           "description": "Mapping of file extensions to the XML tag name used in the .csproj file. Example: {\".cs\": \"Compile\", \".xaml\": \"Page\"}"
+        },
+        "auto-import-to-csproj.showNotifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show popup notifications when the .csproj is successfully updated."
         }
       }
     }
