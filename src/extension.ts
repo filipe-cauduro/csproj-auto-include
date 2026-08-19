@@ -4,9 +4,9 @@ import { csprojPaths } from "./workspaceState"
 import { handleNewFile, handleDeletedFile, handleRenamedFile } from "./handlers"
 
 export async function activate(context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+    const config = vscode.workspace.getConfiguration("csproj-auto-include")
     if (config.get<boolean>("showNotifications")) {
-        vscode.window.showInformationMessage("Auto Import to CSProj is active!");
+        vscode.window.showInformationMessage("CSProj Auto Include is active!");
     }
     // Initial load
     const uris = await vscode.workspace.findFiles("**/*.csproj")
@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Listen to new file creation
     const fileCreateListener = vscode.workspace.onDidCreateFiles(async (event) => {
-        const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+        const config = vscode.workspace.getConfiguration("csproj-auto-include")
         const fileMappings = config.get<Record<string, string>>("fileMappings", {
             ".cs": "Compile"
         })
@@ -65,7 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Listen to file renames
     const fileRenameListener = vscode.workspace.onDidRenameFiles(async (event) => {
-        const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+        const config = vscode.workspace.getConfiguration("csproj-auto-include")
         const fileMappings = config.get<Record<string, string>>("fileMappings", {
             ".cs": "Compile"
         })

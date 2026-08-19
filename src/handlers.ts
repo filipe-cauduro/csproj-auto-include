@@ -153,12 +153,12 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
                 edit.replace(csprojUri, fullRange, csprojText)
                 await vscode.workspace.applyEdit(edit)
                 await document.save()
-                const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+                const config = vscode.workspace.getConfiguration("csproj-auto-include")
                 if (config.get<boolean>("showNotifications")) {
                     vscode.window.showInformationMessage(`Successfully updated ${path.basename(csprojUri.fsPath)}!`);
                 }
             } else {
-                const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+                const config = vscode.workspace.getConfiguration("csproj-auto-include")
                 if (config.get<boolean>("showNotifications")) {
                     vscode.window.showInformationMessage(`No changes needed in ${path.basename(csprojUri.fsPath)}.`);
                 }
@@ -175,7 +175,7 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
             await handleNewFile(newFilePath, newTag)
         }
         if (!oldClosestCsproj && !newClosestCsproj) {
-            const config = vscode.workspace.getConfiguration("auto-import-to-csproj")
+            const config = vscode.workspace.getConfiguration("csproj-auto-include")
             if (config.get<boolean>("showNotifications")) {
                 vscode.window.showWarningMessage(`Could not find a .csproj for ${path.basename(oldFilePath)} or ${path.basename(newFilePath)}`);
             }

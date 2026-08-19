@@ -1,8 +1,8 @@
 {
-  "name": "auto-import-to-csproj",
-  "displayName": "Auto Import to CSProj",
+  "name": "csproj-auto-include",
+  "displayName": "CSProj Auto Include",
   "description": "Automatically import newly created files into a .csproj file",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
@@ -16,16 +16,16 @@
   "main": "./build/extension.js",
   "contributes": {
     "configuration": {
-      "title": "Auto Import to CSProj",
+      "title": "CSProj Auto Include",
       "properties": {
-        "auto-import-to-csproj.fileMappings": {
+        "csproj-auto-include.fileMappings": {
           "type": "object",
           "default": {
             ".cs": "Compile"
           },
           "description": "Mapping of file extensions to the XML tag name used in the .csproj file. Example: {\".cs\": \"Compile\", \".xaml\": \"Page\"}"
         },
-        "auto-import-to-csproj.showNotifications": {
+        "csproj-auto-include.showNotifications": {
           "type": "boolean",
           "default": false,
           "description": "Whether to show popup notifications when the .csproj is successfully updated."
