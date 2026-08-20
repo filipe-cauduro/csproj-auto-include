@@ -16,6 +16,7 @@ export function addTagToCsproj(csprojText: string, tag: string, includePath: str
     const itemGroupRegex = /<ItemGroup>([\s\S]*?)<\/ItemGroup>/g
     let match
     let lastItemGroupEndIndex = -1
+    let targetItemGroupMatch: RegExpExecArray | null = null
 
     while ((match = itemGroupRegex.exec(csprojText)) !== null) {
         lastItemGroupEndIndex = itemGroupRegex.lastIndex
@@ -28,38 +29,48 @@ export function addTagToCsproj(csprojText: string, tag: string, includePath: str
             innerContent.includes(`<${tag}\r`) ||
             innerContent.includes(`<${tag}\n`)
         ) {
-            // Found a group with the same tag. Insert before its closing tag.
-            const insertPos = lastItemGroupEndIndex - "</ItemGroup>".length
+            targetItemGroupMatch = match
+        }
+    }
 
-            let whitespaceBeforeEndTag = ""
-            let wsPos = insertPos - 1
-            while (
-                wsPos >= 0 &&
-                (csprojText[wsPos] === " " || csprojText[wsPos] === "\t" || csprojText[wsPos] === "\r")
-            ) {
-                whitespaceBeforeEndTag = csprojText[wsPos] + whitespaceBeforeEndTag
-                wsPos--
-            }
+    if (targetItemGroupMatch) {
+        const innerContent = targetItemGroupMatch[1]
 
-            if (csprojText[wsPos] === "\n") {
-                return (
-                    csprojText.slice(0, wsPos + 1) +
-                    newElement +
-                    whitespaceBeforeEndTag +
-                    "</ItemGroup>" +
-                    csprojText.slice(lastItemGroupEndIndex)
-                )
+        let lastTagStart = -1
+        const tagRegex = new RegExp(`<${tag}[\\s>\\r\\n]`, "g")
+        let tm
+        while ((tm = tagRegex.exec(innerContent)) !== null) {
+            lastTagStart = tm.index
+        }
+
+        let insertOffset = innerContent.length
+        if (lastTagStart !== -1) {
+            const closingTag = `</${tag}>`
+            const closingTagIdx = innerContent.indexOf(closingTag, lastTagStart)
+            if (closingTagIdx !== -1) {
+                insertOffset = closingTagIdx + closingTag.length
             } else {
-                return (
-                    csprojText.slice(0, insertPos) +
-                    "\n" +
-                    newElement +
-                    whitespaceBeforeEndTag +
-                    "</ItemGroup>" +
-                    csprojText.slice(lastItemGroupEndIndex)
-                )
+                const selfClosingIdx = innerContent.indexOf("/>", lastTagStart)
+                if (selfClosingIdx !== -1) {
+                    insertOffset = selfClosingIdx + "/>".length
+                } else {
+                    const normalClosingIdx = innerContent.indexOf(">", lastTagStart)
+                    if (normalClosingIdx !== -1) {
+                        insertOffset = normalClosingIdx + ">".length
+                    }
+                }
             }
         }
+
+        const insertPos = targetItemGroupMatch.index + "<ItemGroup>".length + insertOffset
+        const newline = csprojText.includes("\r\n") ? "\r\n" : "\n"
+
+        return (
+            csprojText.slice(0, insertPos) +
+            newline +
+            newElement.replace(/\n$/, "") +
+            csprojText.slice(insertPos)
+        )
     }
 
     // No ItemGroup with this tag found. Create a new ItemGroup.
