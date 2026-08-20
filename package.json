@@ -2,7 +2,7 @@
   "name": "csproj-auto-include",
   "displayName": "CSProj Auto Include",
   "description": "Automates the tedious process of manually maintaining your .csproj files",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "author": {
     "name": "filipe-cauduro",
