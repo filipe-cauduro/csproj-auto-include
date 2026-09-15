@@ -19,6 +19,21 @@ export async function activate(context: vscode.ExtensionContext) {
     csprojWatcher.onDidCreate((uri) => csprojPaths.add(uri.fsPath))
     csprojWatcher.onDidDelete((uri) => csprojPaths.delete(uri.fsPath))
 
+    // Source control providers can delete files directly on disk (for example,
+    // when discarding an untracked file), which does not emit onDidDeleteFiles.
+    // Keep deletion handling serialized so simultaneous filesystem events do not
+    // overwrite each other's changes to the same project file.
+    let deletionQueue = Promise.resolve()
+    const enqueueDeletedFile = (filePath: string) => {
+        deletionQueue = deletionQueue
+            .then(() => handleDeletedFile(filePath))
+            .catch((err) => console.error("Error processing file deletion", err))
+        return deletionQueue
+    }
+
+    const fileDeleteWatcher = vscode.workspace.createFileSystemWatcher("**/*", true, true, false)
+    fileDeleteWatcher.onDidDelete((uri) => enqueueDeletedFile(uri.fsPath))
+
     // Recursive directory walker
     async function walkDirectory(uri: vscode.Uri, callback: (fileUri: vscode.Uri) => Promise<void>) {
         try {
@@ -57,7 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Listen to file deletions
     const fileDeleteListener = vscode.workspace.onDidDeleteFiles(async (event) => {
         for (const file of event.files) {
-            await handleDeletedFile(file.fsPath)
+            await enqueueDeletedFile(file.fsPath)
         }
     })
 
@@ -101,7 +116,13 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     })
 
-    context.subscriptions.push(csprojWatcher, fileCreateListener, fileDeleteListener, fileRenameListener)
+    context.subscriptions.push(
+        csprojWatcher,
+        fileDeleteWatcher,
+        fileCreateListener,
+        fileDeleteListener,
+        fileRenameListener
+    )
 }
 
 export function deactivate() {}
