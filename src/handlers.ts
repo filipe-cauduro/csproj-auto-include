@@ -3,7 +3,32 @@ import * as path from "path"
 import { csprojPaths } from "./workspaceState"
 import { addTagToCsproj, removeTagFromCsproj, removeTagsByPrefix } from "./csprojEditor"
 
+import { minimatch } from "minimatch"
+
+function isBlocked(filePath: string): boolean {
+    const config = vscode.workspace.getConfiguration("csproj-auto-include");
+    const blocklist = config.get<string[]>("blocklist", []);
+    if (!blocklist || blocklist.length === 0) return false;
+
+    // Normalize path to use forward slashes for matching
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    for (const pattern of blocklist) {
+        if (!pattern) continue;
+        
+        // Use minimatch with options like dot: true (match dotfiles) and matchBase (optional, but standard globs usually need /**/* for that)
+        // minimatch by default matches exactly, but in VS code find all, a pattern like `*.cs` matches anywhere if it's `**/*.cs`
+        // We'll let the user provide standard glob patterns.
+        if (minimatch(normalizedPath, pattern, { dot: true, matchBase: true })) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export async function handleNewFile(filePath: string, tag: string) {
+    if (isBlocked(filePath)) return;
+
     // Find closest csproj
     let dir = path.dirname(filePath)
     let closestCsproj: string | undefined
@@ -51,6 +76,8 @@ export async function handleNewFile(filePath: string, tag: string) {
 }
 
 export async function handleDeletedFile(filePath: string) {
+    if (isBlocked(filePath)) return;
+
     // Find closest csproj
     let dir = path.dirname(filePath)
     let closestCsproj: string | undefined
@@ -98,6 +125,22 @@ export async function handleDeletedFile(filePath: string) {
 }
 
 export async function handleRenamedFile(oldFilePath: string, newFilePath: string, newTag: string | undefined) {
+    if (isBlocked(oldFilePath) && isBlocked(newFilePath)) return;
+    
+    // If only one is blocked, it's either a delete or create
+    if (isBlocked(oldFilePath)) {
+        // Was blocked, now unblocked (acts like create)
+        if (newTag) {
+            await handleNewFile(newFilePath, newTag);
+        }
+        return;
+    }
+    if (isBlocked(newFilePath)) {
+        // Was unblocked, now blocked (acts like delete)
+        await handleDeletedFile(oldFilePath);
+        return;
+    }
+
     let oldDir = path.dirname(oldFilePath)
     let oldClosestCsproj: string | undefined
 
