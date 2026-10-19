@@ -38,7 +38,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "List of glob patterns for files that should be ignored by the extension. Examples: 'obj/**', '**/suggestion/*/trade.cs', '*.test.cs'."
+          "description": "Glob patterns for files to ignore, matched against paths relative to the closest .csproj and workspace folder, as well as absolute paths. Examples: 'obj/**', '**/suggestion/*/trade.cs', '*.test.cs'."
         },
         "csproj-auto-include.showNotifications": {
           "type": "boolean",

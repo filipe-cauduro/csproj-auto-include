@@ -3,49 +3,39 @@ import * as path from "path"
 import { csprojPaths } from "./workspaceState"
 import { addTagToCsproj, removeTagFromCsproj, removeTagsByPrefix } from "./csprojEditor"
 
-import { minimatch } from "minimatch"
+import { isPathBlocked } from "./blocklist"
+
+function findClosestCsproj(filePath: string): string | undefined {
+    let directory = path.dirname(filePath)
+    while (directory) {
+        for (const csproj of csprojPaths) {
+            if (path.dirname(csproj) === directory) return csproj
+        }
+        const parent = path.dirname(directory)
+        if (parent === directory) return undefined
+        directory = parent
+    }
+    return undefined
+}
 
 function isBlocked(filePath: string): boolean {
-    const config = vscode.workspace.getConfiguration("csproj-auto-include");
-    const blocklist = config.get<string[]>("blocklist", []);
-    if (!blocklist || blocklist.length === 0) return false;
-
-    // Normalize path to use forward slashes for matching
-    const normalizedPath = filePath.replace(/\\/g, '/');
-
-    for (const pattern of blocklist) {
-        if (!pattern) continue;
-        
-        // Use minimatch with options like dot: true (match dotfiles) and matchBase (optional, but standard globs usually need /**/* for that)
-        // minimatch by default matches exactly, but in VS code find all, a pattern like `*.cs` matches anywhere if it's `**/*.cs`
-        // We'll let the user provide standard glob patterns.
-        if (minimatch(normalizedPath, pattern, { dot: true, matchBase: true })) {
-            return true;
-        }
-    }
-    return false;
+    const uri = vscode.Uri.file(filePath)
+    const config = vscode.workspace.getConfiguration("csproj-auto-include", uri)
+    const blocklist = config.get<string[]>("blocklist", [])
+    if (!blocklist?.length) return false
+    const closestCsproj = findClosestCsproj(filePath)
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri)
+    const baseDirectories: string[] = []
+    if (closestCsproj) baseDirectories.push(path.dirname(closestCsproj))
+    if (workspaceFolder) baseDirectories.push(workspaceFolder.uri.fsPath)
+    return isPathBlocked(filePath, blocklist, baseDirectories)
 }
 
 export async function handleNewFile(filePath: string, tag: string) {
-    if (isBlocked(filePath)) return;
+    if (isBlocked(filePath)) return
 
     // Find closest csproj
-    let dir = path.dirname(filePath)
-    let closestCsproj: string | undefined
-
-    while (dir && dir !== path.dirname(dir)) {
-        // until root
-        for (const csproj of csprojPaths) {
-            if (path.dirname(csproj) === dir) {
-                closestCsproj = csproj
-                break
-            }
-        }
-        if (closestCsproj) {
-            break
-        }
-        dir = path.dirname(dir)
-    }
+    const closestCsproj = findClosestCsproj(filePath)
 
     if (!closestCsproj) {
         return // No csproj found for this file
@@ -76,25 +66,10 @@ export async function handleNewFile(filePath: string, tag: string) {
 }
 
 export async function handleDeletedFile(filePath: string) {
-    if (isBlocked(filePath)) return;
+    if (isBlocked(filePath)) return
 
     // Find closest csproj
-    let dir = path.dirname(filePath)
-    let closestCsproj: string | undefined
-
-    while (dir && dir !== path.dirname(dir)) {
-        // until root
-        for (const csproj of csprojPaths) {
-            if (path.dirname(csproj) === dir) {
-                closestCsproj = csproj
-                break
-            }
-        }
-        if (closestCsproj) {
-            break
-        }
-        dir = path.dirname(dir)
-    }
+    const closestCsproj = findClosestCsproj(filePath)
 
     if (!closestCsproj) {
         return // No csproj found for this file
@@ -125,49 +100,24 @@ export async function handleDeletedFile(filePath: string) {
 }
 
 export async function handleRenamedFile(oldFilePath: string, newFilePath: string, newTag: string | undefined) {
-    if (isBlocked(oldFilePath) && isBlocked(newFilePath)) return;
-    
+    if (isBlocked(oldFilePath) && isBlocked(newFilePath)) return
+
     // If only one is blocked, it's either a delete or create
     if (isBlocked(oldFilePath)) {
         // Was blocked, now unblocked (acts like create)
         if (newTag) {
-            await handleNewFile(newFilePath, newTag);
+            await handleNewFile(newFilePath, newTag)
         }
-        return;
+        return
     }
     if (isBlocked(newFilePath)) {
         // Was unblocked, now blocked (acts like delete)
-        await handleDeletedFile(oldFilePath);
-        return;
+        await handleDeletedFile(oldFilePath)
+        return
     }
 
-    let oldDir = path.dirname(oldFilePath)
-    let oldClosestCsproj: string | undefined
-
-    while (oldDir && oldDir !== path.dirname(oldDir)) {
-        for (const csproj of csprojPaths) {
-            if (path.dirname(csproj) === oldDir) {
-                oldClosestCsproj = csproj
-                break
-            }
-        }
-        if (oldClosestCsproj) break
-        oldDir = path.dirname(oldDir)
-    }
-
-    let newDir = path.dirname(newFilePath)
-    let newClosestCsproj: string | undefined
-
-    while (newDir && newDir !== path.dirname(newDir)) {
-        for (const csproj of csprojPaths) {
-            if (path.dirname(csproj) === newDir) {
-                newClosestCsproj = csproj
-                break
-            }
-        }
-        if (newClosestCsproj) break
-        newDir = path.dirname(newDir)
-    }
+    const oldClosestCsproj = findClosestCsproj(oldFilePath)
+    const newClosestCsproj = findClosestCsproj(newFilePath)
 
     if (oldClosestCsproj && oldClosestCsproj === newClosestCsproj) {
         // Same csproj
@@ -198,12 +148,12 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
                 await document.save()
                 const config = vscode.workspace.getConfiguration("csproj-auto-include")
                 if (config.get<boolean>("showNotifications")) {
-                    vscode.window.showInformationMessage(`Successfully updated ${path.basename(csprojUri.fsPath)}!`);
+                    vscode.window.showInformationMessage(`Successfully updated ${path.basename(csprojUri.fsPath)}!`)
                 }
             } else {
                 const config = vscode.workspace.getConfiguration("csproj-auto-include")
                 if (config.get<boolean>("showNotifications")) {
-                    vscode.window.showInformationMessage(`No changes needed in ${path.basename(csprojUri.fsPath)}.`);
+                    vscode.window.showInformationMessage(`No changes needed in ${path.basename(csprojUri.fsPath)}.`)
                 }
             }
         } catch (err) {
@@ -220,7 +170,9 @@ export async function handleRenamedFile(oldFilePath: string, newFilePath: string
         if (!oldClosestCsproj && !newClosestCsproj) {
             const config = vscode.workspace.getConfiguration("csproj-auto-include")
             if (config.get<boolean>("showNotifications")) {
-                vscode.window.showWarningMessage(`Could not find a .csproj for ${path.basename(oldFilePath)} or ${path.basename(newFilePath)}`);
+                vscode.window.showWarningMessage(
+                    `Could not find a .csproj for ${path.basename(oldFilePath)} or ${path.basename(newFilePath)}`
+                )
             }
         }
     }
