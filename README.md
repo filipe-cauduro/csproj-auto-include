@@ -1,13 +1,15 @@
 <h1 align="center">
 	<br>
-	CSProj Auto Include
+	CSProj Auto Include — VS Code Extension
 	<br>
 	<br>
 </h1>
 
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)](https://code.visualstudio.com/)
 
-CSProj Auto Include automates the tedious process of manually maintaining your `.csproj` files when working in MSBuild C# projects. It automatically updates the `<ItemGroup>` tags in your `.csproj` files whenever you modify files in your VS Code workspace.
+CSProj Auto Include is a Visual Studio Code (VS Code) extension that automatically maintains explicit file entries in C# MSBuild `.csproj` files. It updates the `<ItemGroup>` entries when you create, copy, move, rename, or delete files in the VS Code Explorer.
+
+It is designed for projects that require explicit file includes, such as legacy .NET Framework projects. Configure the file extensions you want to track in `csproj-auto-include.fileMappings` to get started.
 
 ## Highlights
 
