@@ -39,7 +39,7 @@ async function main(): Promise<void> {
         await runTests({
             vscodeExecutablePath: process.env.VSCODE_EXECUTABLE_PATH,
             version: process.env.VSCODE_TEST_VERSION || "stable",
-            extensionDevelopmentPath: extensionRoot,
+            extensionDevelopmentPath: process.env.CSPROJ_TEST_EXTENSION_PATH || extensionRoot,
             extensionTestsPath: path.join(__dirname, "integration", "index.js"),
             extensionTestsEnv: {
                 ELECTRON_RUN_AS_NODE: undefined,

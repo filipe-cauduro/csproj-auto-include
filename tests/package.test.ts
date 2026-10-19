@@ -26,6 +26,13 @@ describe("Extension package contents", () => {
         assert.deepEqual(excluded, [])
     })
 
+    it("excludes development dependencies from the package", () => {
+        const excluded = [...files].filter((file) =>
+            /^node_modules\/(mocha|typescript|@vscode\/test-electron)\//.test(file)
+        )
+        assert.deepEqual(excluded, [])
+    })
+
     for (const dependency of Object.keys(manifest.dependencies || {})) {
         it(`includes the runtime entry point of ${dependency}`, () => {
             const fromExtension = createRequire(path.join(root, manifest.main))
