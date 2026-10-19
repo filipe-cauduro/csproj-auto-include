@@ -9,3 +9,5 @@ webpack.config.ts
 vsc-extension-quickstart.md
 **/*.map
 **/*.ts
+tests/**
+.agents/**
