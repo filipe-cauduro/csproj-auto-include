@@ -1,4 +1,4 @@
-import * as path from "path"
+import { relative } from "node:path"
 import { minimatch } from "minimatch"
 
 export function isPathBlocked(
@@ -6,7 +6,7 @@ export function isPathBlocked(
     patterns: readonly string[],
     baseDirectories: readonly string[]
 ): boolean {
-    const candidates = [filePath, ...baseDirectories.map((directory) => path.relative(directory, filePath))].map(
+    const candidates = [filePath, ...baseDirectories.map((directory) => relative(directory, filePath))].map(
         (candidate) => candidate.replace(/\\/g, "/")
     )
 
