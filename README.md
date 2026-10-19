@@ -107,7 +107,7 @@ For manual testing:
 
 If you are contributing and made more tests, commit them as well, I would really appreciate it!
 
-**This code was generated using Antigravity and Gemini 3.1 Pro.**
+**This code was generated using Codex and GPT 6.1 Sol.**
 
 ## Packaging and Publishing
 
@@ -122,8 +122,6 @@ yarn package
 ```
 
 The package is written to `dist/csproj-auto-include-<version>.vsix`. Runtime dependencies are included; development dependencies, test sources, and downloaded VS Code instances are excluded.
-
-Upload the VSIX through the [Visual Studio Marketplace publisher management page](https://marketplace.visualstudio.com/manage/publishers/) under the `filipe-cauduro` publisher. For subsequent releases, increase `version` in `package.json` before generating the package. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for account setup and publishing options.
 
 ## License
 
