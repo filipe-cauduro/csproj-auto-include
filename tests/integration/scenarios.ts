@@ -202,6 +202,32 @@ export const scenarios: Scenario[] = [
         }
     },
     {
+        name: "keeps all includes when several create events arrive together",
+        run: async (f) => {
+            const names = ["ConcurrentOne.cs", "ConcurrentTwo.cs", "ConcurrentThree.cs"]
+            await Promise.all(names.map((name) => f.create(`Project2/${name}`)))
+            await f.expectItems("Project2", ["Class1.cs", ...names])
+        }
+    },
+    {
+        name: "keeps an include when a deleted file is immediately recreated externally",
+        run: async (f) => {
+            const uri = f.uri("Project2/Class1.cs")
+            const original = await fs.readFile(uri.fsPath)
+            await fs.unlink(uri.fsPath)
+            await fs.writeFile(uri.fsPath, original)
+            await f.expectItems("Project2", ["Class1.cs"], [], 1000)
+        }
+    },
+    {
+        name: "keeps an include after an immediate rename round trip",
+        run: async (f) => {
+            await f.rename("Project2/Class1.cs", "Project2/Temporary.cs")
+            await f.rename("Project2/Temporary.cs", "Project2/Class1.cs")
+            await f.expectItems("Project2", ["Class1.cs"], ["Temporary.cs"], 1000)
+        }
+    },
+    {
         name: "blocks files using the documented relative folder glob obj/** (regression)",
         run: async (f) => {
             await f.configure({ blocklist: ["obj/**"] })

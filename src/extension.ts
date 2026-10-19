@@ -2,11 +2,12 @@ import * as vscode from "vscode"
 import * as path from "path"
 import { csprojPaths } from "./workspaceState"
 import { handleNewFile, handleDeletedFile, handleRenamedFile } from "./handlers"
+import { FileOperationQueue } from "./fileOperationQueue"
 
 export async function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration("csproj-auto-include")
     if (config.get<boolean>("showNotifications")) {
-        vscode.window.showInformationMessage("CSProj Auto Include is active!");
+        vscode.window.showInformationMessage("CSProj Auto Include is active!")
     }
     // Initial load
     const uris = await vscode.workspace.findFiles("**/*.csproj")
@@ -19,16 +20,19 @@ export async function activate(context: vscode.ExtensionContext) {
     csprojWatcher.onDidCreate((uri) => csprojPaths.add(uri.fsPath))
     csprojWatcher.onDidDelete((uri) => csprojPaths.delete(uri.fsPath))
 
-    // Source control providers can delete files directly on disk (for example,
-    // when discarding an untracked file), which does not emit onDidDeleteFiles.
-    // Keep deletion handling serialized so simultaneous filesystem events do not
-    // overwrite each other's changes to the same project file.
-    let deletionQueue = Promise.resolve()
+    // All file events can update the same project, so process them in order.
+    const operations = new FileOperationQueue((err) => console.error("Error processing file operation", err))
     const enqueueDeletedFile = (filePath: string) => {
-        deletionQueue = deletionQueue
-            .then(() => handleDeletedFile(filePath))
-            .catch((err) => console.error("Error processing file deletion", err))
-        return deletionQueue
+        return operations.run(async () => {
+            try {
+                await vscode.workspace.fs.stat(vscode.Uri.file(filePath))
+                // A delayed watcher notification must not remove a recreated path.
+                return
+            } catch (error) {
+                if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") throw error
+            }
+            await handleDeletedFile(filePath)
+        })
     }
 
     const fileDeleteWatcher = vscode.workspace.createFileSystemWatcher("**/*", true, true, false)
@@ -40,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const stat = await vscode.workspace.fs.stat(uri)
             if (stat.type === vscode.FileType.Directory) {
                 const children = await vscode.workspace.fs.readDirectory(uri)
-                for (const [name, type] of children) {
+                for (const [name] of children) {
                     await walkDirectory(vscode.Uri.joinPath(uri, name), callback)
                 }
             } else {
@@ -52,22 +56,24 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     // Listen to new file creation
-    const fileCreateListener = vscode.workspace.onDidCreateFiles(async (event) => {
-        const config = vscode.workspace.getConfiguration("csproj-auto-include")
-        const fileMappings = config.get<Record<string, string>>("fileMappings", {})
+    const fileCreateListener = vscode.workspace.onDidCreateFiles((event) =>
+        operations.run(async () => {
+            const config = vscode.workspace.getConfiguration("csproj-auto-include")
+            const fileMappings = config.get<Record<string, string>>("fileMappings", {})
 
-        for (const file of event.files) {
-            await walkDirectory(file, async (fileUri) => {
-                const ext = path.extname(fileUri.fsPath).toLowerCase()
-                const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
-                const tag = fileMappings[ext] || fileMappings[extWithoutDot]
+            for (const file of event.files) {
+                await walkDirectory(file, async (fileUri) => {
+                    const ext = path.extname(fileUri.fsPath).toLowerCase()
+                    const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
+                    const tag = fileMappings[ext] || fileMappings[extWithoutDot]
 
-                if (tag) {
-                    await handleNewFile(fileUri.fsPath, tag)
-                }
-            })
-        }
-    })
+                    if (tag) {
+                        await handleNewFile(fileUri.fsPath, tag)
+                    }
+                })
+            }
+        })
+    )
 
     // Listen to file deletions
     const fileDeleteListener = vscode.workspace.onDidDeleteFiles(async (event) => {
@@ -77,44 +83,46 @@ export async function activate(context: vscode.ExtensionContext) {
     })
 
     // Listen to file renames
-    const fileRenameListener = vscode.workspace.onDidRenameFiles(async (event) => {
-        const config = vscode.workspace.getConfiguration("csproj-auto-include")
-        const fileMappings = config.get<Record<string, string>>("fileMappings", {})
+    const fileRenameListener = vscode.workspace.onDidRenameFiles((event) =>
+        operations.run(async () => {
+            const config = vscode.workspace.getConfiguration("csproj-auto-include")
+            const fileMappings = config.get<Record<string, string>>("fileMappings", {})
 
-        for (const file of event.files) {
-            let isDirectory = false
-            try {
-                const stat = await vscode.workspace.fs.stat(file.newUri)
-                isDirectory = stat.type === vscode.FileType.Directory
-            } catch (e) {
-                // If stat fails (e.g., file locked during rename), assume it's a file
-                isDirectory = false
-            }
+            for (const file of event.files) {
+                let isDirectory = false
+                try {
+                    const stat = await vscode.workspace.fs.stat(file.newUri)
+                    isDirectory = stat.type === vscode.FileType.Directory
+                } catch (e) {
+                    // If stat fails (e.g., file locked during rename), assume it's a file
+                    isDirectory = false
+                }
 
-            try {
-                if (isDirectory) {
-                    await walkDirectory(file.newUri, async (childNewUri) => {
-                        const relativePath = path.relative(file.newUri.fsPath, childNewUri.fsPath)
-                        const childOldUri = vscode.Uri.file(path.join(file.oldUri.fsPath, relativePath))
+                try {
+                    if (isDirectory) {
+                        await walkDirectory(file.newUri, async (childNewUri) => {
+                            const relativePath = path.relative(file.newUri.fsPath, childNewUri.fsPath)
+                            const childOldUri = vscode.Uri.file(path.join(file.oldUri.fsPath, relativePath))
 
-                        const ext = path.extname(childNewUri.fsPath).toLowerCase()
+                            const ext = path.extname(childNewUri.fsPath).toLowerCase()
+                            const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
+                            const tag = fileMappings[ext] || fileMappings[extWithoutDot]
+
+                            await handleRenamedFile(childOldUri.fsPath, childNewUri.fsPath, tag)
+                        })
+                    } else {
+                        const ext = path.extname(file.newUri.fsPath).toLowerCase()
                         const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
                         const tag = fileMappings[ext] || fileMappings[extWithoutDot]
 
-                        await handleRenamedFile(childOldUri.fsPath, childNewUri.fsPath, tag)
-                    })
-                } else {
-                    const ext = path.extname(file.newUri.fsPath).toLowerCase()
-                    const extWithoutDot = ext.startsWith(".") ? ext.substring(1) : ext
-                    const tag = fileMappings[ext] || fileMappings[extWithoutDot]
-
-                    await handleRenamedFile(file.oldUri.fsPath, file.newUri.fsPath, tag)
+                        await handleRenamedFile(file.oldUri.fsPath, file.newUri.fsPath, tag)
+                    }
+                } catch (e) {
+                    // ignore errors during processing
                 }
-            } catch (e) {
-                // ignore errors during processing
             }
-        }
-    })
+        })
+    )
 
     context.subscriptions.push(
         csprojWatcher,
