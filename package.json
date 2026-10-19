@@ -28,10 +28,16 @@
       "properties": {
         "csproj-auto-include.fileMappings": {
           "type": "object",
-          "default": {
-            ".cs": "Compile"
-          },
+          "default": {},
           "description": "Mapping of file extensions to the XML tag name used in the .csproj file. Example: {\".cs\": \"Compile\", \".xaml\": \"Page\"}"
+        },
+        "csproj-auto-include.blocklist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of glob patterns for files that should be ignored by the extension. Examples: 'obj/**', '**/suggestion/*/trade.cs', '*.test.cs'."
         },
         "csproj-auto-include.showNotifications": {
           "type": "boolean",
@@ -52,6 +58,7 @@
     "package": "vsce package --allow-missing-repository --skip-license -o dist"
   },
   "devDependencies": {
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^18.x",
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.x",
@@ -63,5 +70,7 @@
     "prettier": "^3.9.6",
     "typescript": "^5.x"
   },
-  "dependencies": {}
+  "dependencies": {
+    "minimatch": "^10.2.6"
+  }
 }
