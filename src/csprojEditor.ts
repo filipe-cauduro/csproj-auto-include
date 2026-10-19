@@ -65,12 +65,7 @@ export function addTagToCsproj(csprojText: string, tag: string, includePath: str
         const insertPos = targetItemGroupMatch.index + "<ItemGroup>".length + insertOffset
         const newline = csprojText.includes("\r\n") ? "\r\n" : "\n"
 
-        return (
-            csprojText.slice(0, insertPos) +
-            newline +
-            newElement.replace(/\n$/, "") +
-            csprojText.slice(insertPos)
-        )
+        return csprojText.slice(0, insertPos) + newline + newElement.replace(/\n$/, "") + csprojText.slice(insertPos)
     }
 
     // No ItemGroup with this tag found. Create a new ItemGroup.
