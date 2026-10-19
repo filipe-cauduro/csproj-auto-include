@@ -22,7 +22,7 @@ It is designed for projects that require explicit file includes, such as legacy 
 
 ## Usage
 
-The extension works automatically in the background by listening to file operations performed through the VS Code Explorer (and only through it, to prevent unintended changes from the terminal or other tools).
+The extension tracks file creation, copying, moving, and renaming through the VS Code Explorer. It also watches deletions on disk, so removing files through source control or the terminal removes their project entries.
 
 If you create, copy, move, or rename a file (or an entire folder), the extension immediately traverses up the directory tree to find the nearest `.csproj` file and updates its contents. If you delete a file, it is instantly removed from the project file to prevent build errors.
 
@@ -46,6 +46,18 @@ Dictates which files the extension tracks and what XML tag they should receive.
     }
 }
 ```
+
+### `csproj-auto-include.blocklist`
+
+Ignore files using glob patterns. Patterns match paths relative to the closest `.csproj` and the workspace folder, as well as absolute paths. Use forward slashes in patterns on all operating systems.
+
+```json
+{
+    "csproj-auto-include.blocklist": ["obj/**", "bin/**", "*.test.cs"]
+}
+```
+
+For example, `obj/**` ignores the `obj` directory beside the closest `.csproj`; `**/obj/**` also ignores `obj` directories nested further below it. Filename patterns such as `*.test.cs` match at any depth.
 
 ### `csproj-auto-include.showNotifications`
 
@@ -81,7 +93,9 @@ Set `VSCODE_TEST_VERSION` to test a specific VS Code version, or set `VSCODE_EXE
 VSCODE_EXECUTABLE_PATH=/usr/share/code/code yarn test:integration
 ```
 
-The regression checks are active assertions: `obj/**` currently fails to block project-relative paths, and the package check currently fails because `minimatch` is excluded from the VSIX. The stress suite can also expose missing includes after rapid renames. These commands return a nonzero exit code when a regression is detected; failures are not skipped or marked as expected successes.
+The suites include regression checks for project-relative blocklists, runtime dependencies in the VSIX, simultaneous file operations, and rapid renames. These commands return a nonzero exit code when a regression is detected; failures are not skipped or marked as expected successes.
+
+To run the integration suite against an extracted VSIX, set `CSPROJ_TEST_EXTENSION_PATH` to its `extension` directory. Fixtures and test code still come from this repository.
 
 For manual testing:
 
@@ -94,6 +108,22 @@ For manual testing:
 If you are contributing and made more tests, commit them as well, I would really appreciate it!
 
 **This code was generated using Antigravity and Gemini 3.1 Pro.**
+
+## Packaging and Publishing
+
+Run the checks and generate the installable package:
+
+```sh
+yarn test
+yarn test:integration
+yarn test:package
+yarn test:stress
+yarn package
+```
+
+The package is written to `dist/csproj-auto-include-<version>.vsix`. Runtime dependencies are included; development dependencies, test sources, and downloaded VS Code instances are excluded.
+
+Upload the VSIX through the [Visual Studio Marketplace publisher management page](https://marketplace.visualstudio.com/manage/publishers/) under the `filipe-cauduro` publisher. For subsequent releases, increase `version` in `package.json` before generating the package. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for account setup and publishing options.
 
 ## License
 
