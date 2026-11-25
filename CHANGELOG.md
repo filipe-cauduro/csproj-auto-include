@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.5
+
+- Prepare the first public GitHub release with an installable VSIX and installation instructions.
+- Document required file mappings, project compatibility, and troubleshooting.
+- Add automated tests, packaging, and GitHub Releases for new versions on `main`.
+- Make packaging work on Windows, macOS, and Linux with repository and license checks enabled.
+- Bundle runtime dependencies to prevent missing or incompatible transitive packages in the VSIX, and run release integration tests against the extracted package.
+- Require VS Code 1.90 or newer to provide a supported Node.js runtime for dependencies, and align the VS Code API types with that minimum.
+- Add Marketplace search keywords and support links.
+
 ## 1.0.4
 
 - Declare Node.js and VS Code types explicitly for extension compilation.

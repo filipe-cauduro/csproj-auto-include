@@ -1,9 +1,9 @@
 {
   "name": "csproj-auto-include",
   "displayName": "CSProj Auto Include",
-  "description": "Automates the tedious process of manually maintaining your .csproj files",
+  "description": "Automatically update explicit .csproj file includes when creating, moving, renaming, or deleting files in VS Code.",
   "publisher": "filipe-cauduro",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "author": {
     "name": "filipe-cauduro",
@@ -13,8 +13,19 @@
     "type": "git",
     "url": "https://github.com/filipe-cauduro/csproj-auto-include.git"
   },
+  "homepage": "https://github.com/filipe-cauduro/csproj-auto-include#readme",
+  "bugs": {
+    "url": "https://github.com/filipe-cauduro/csproj-auto-include/issues"
+  },
+  "keywords": [
+    "csharp",
+    "csproj",
+    "msbuild",
+    "dotnet",
+    "include"
+  ],
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -49,29 +60,31 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn compile",
+    "vscode:prepublish": "yarn bundle",
     "compile": "tsc -p ./",
+    "bundle": "yarn compile && node scripts/bundle.cjs",
     "watch": "tsc -watch -p ./",
     "compile:tests": "tsc -p tests/tsconfig.json",
     "pretest": "yarn compile && yarn compile:tests",
     "test": "mocha \".vscode-test/compiled/tests/unit/**/*.test.js\"",
     "test:integration": "yarn compile && yarn compile:tests && node .vscode-test/compiled/tests/run-integration.js",
     "test:stress": "yarn compile && yarn compile:tests && node .vscode-test/compiled/tests/run-integration.js --stress",
-    "test:package": "yarn compile && yarn compile:tests && mocha --timeout 30000 .vscode-test/compiled/tests/package.test.js",
+    "test:package": "yarn bundle && yarn compile:tests && mocha --timeout 30000 .vscode-test/compiled/tests/package.test.js",
     "lint": "eslint src --ext ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "style": "yarn lint && yarn format",
-    "package": "mkdir -p dist && vsce package --allow-missing-repository --skip-license -o dist/"
+    "package": "node -e \"require('node:fs').mkdirSync('dist', { recursive: true })\" && vsce package --no-dependencies -o dist/"
   },
   "devDependencies": {
     "@types/minimatch": "^6.0.0",
     "@types/mocha": "^10.0.0",
     "@types/node": "^18.x",
-    "@types/vscode": "^1.80.0",
+    "@types/vscode": "1.90.0",
     "@typescript-eslint/eslint-plugin": "^6.x",
     "@typescript-eslint/parser": "^6.x",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.2",
     "eslint": "^8.x",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",

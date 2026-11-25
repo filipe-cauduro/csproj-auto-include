@@ -10,3 +10,12 @@ vsc-extension-quickstart.md
 **/*.ts
 tests/**
 .agents/**
+.github/**
+scripts/**
+dist/**
+*.vsix
+node_modules/**
+build/**
+!build/extension.js
+!build/ThirdPartyNotices.txt
+tsconfig.json

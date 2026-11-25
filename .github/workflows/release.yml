@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+      - name: Check release version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "number=$VERSION" >> "$GITHUB_OUTPUT"
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          if node -e 'const releases = require(process.argv[1]); process.exit(releases.some(r => r.tag_name === `v${process.argv[2]}`) ? 0 : 1)' "$RUNNER_TEMP/releases.json" "$VERSION"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release v$VERSION already exists; skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install dependencies
+        if: steps.version.outputs.exists == 'false'
+        run: yarn install --frozen-lockfile
+      - name: Unit tests
+        if: steps.version.outputs.exists == 'false'
+        run: yarn test
+      - name: Package checks
+        if: steps.version.outputs.exists == 'false'
+        run: yarn test:package
+      - name: Package VSIX
+        if: steps.version.outputs.exists == 'false'
+        run: yarn package
+      - name: Extract installable package
+        if: steps.version.outputs.exists == 'false'
+        run: |
+          unzip -q dist/*.vsix -d "$RUNNER_TEMP/vsix"
+          echo "CSPROJ_TEST_EXTENSION_PATH=$RUNNER_TEMP/vsix/extension" >> "$GITHUB_ENV"
+      - name: Integration tests against VSIX
+        if: steps.version.outputs.exists == 'false'
+        run: xvfb-run -a yarn test:integration
+      - name: Stress tests against VSIX
+        if: steps.version.outputs.exists == 'false'
+        run: xvfb-run -a yarn test:stress
+      - name: Publish GitHub release
+        if: steps.version.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          node scripts/release-notes.cjs > "$RUNNER_TEMP/release-notes.md"
+          gh release create "v$VERSION" "dist/csproj-auto-include-$VERSION.vsix" \
+            --target "$GITHUB_SHA" \
+            --title "CSProj Auto Include v$VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --latest

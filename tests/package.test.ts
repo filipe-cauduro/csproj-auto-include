@@ -1,6 +1,8 @@
 import * as assert from "node:assert/strict"
 import * as path from "node:path"
-import { createRequire } from "node:module"
+import * as fs from "node:fs/promises"
+import { isBuiltin } from "node:module"
+import * as vm from "node:vm"
 import { listFiles, PackageManager } from "@vscode/vsce"
 import manifest = require("../package.json")
 import { extensionRoot } from "./environment"
@@ -11,7 +13,7 @@ describe("Extension package contents", () => {
 
     before(async () => {
         files = new Set(
-            (await listFiles({ cwd: root, packageManager: PackageManager.Yarn })).map((file) =>
+            (await listFiles({ cwd: root, packageManager: PackageManager.None })).map((file) =>
                 file.replace(/\\/g, "/")
             )
         )
@@ -33,11 +35,20 @@ describe("Extension package contents", () => {
         assert.deepEqual(excluded, [])
     })
 
-    for (const dependency of Object.keys(manifest.dependencies || {})) {
-        it(`includes the runtime entry point of ${dependency}`, () => {
-            const fromExtension = createRequire(path.join(root, manifest.main))
-            const entry = path.relative(root, fromExtension.resolve(dependency)).split(path.sep).join("/")
-            assert.ok(files.has(entry), `Runtime dependency ${dependency} is missing from the VSIX: ${entry}`)
+    it("loads the bundled extension without external runtime dependencies", async () => {
+        const exports: Record<string, unknown> = {}
+        const module = { exports }
+        const bundle = await fs.readFile(path.join(root, manifest.main), "utf8")
+        vm.runInNewContext(bundle, {
+            exports,
+            module,
+            require: (id: string) => {
+                if (id === "vscode") return {}
+                assert.ok(isBuiltin(id), `Unbundled runtime dependency: ${id}`)
+                return require(id)
+            }
         })
-    }
+        assert.equal(typeof module.exports.activate, "function")
+        assert.equal(typeof module.exports.deactivate, "function")
+    })
 })

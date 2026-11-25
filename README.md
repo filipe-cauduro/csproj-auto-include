@@ -6,10 +6,60 @@
 </h1>
 
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)](https://code.visualstudio.com/)
+[![GitHub release](https://img.shields.io/github/v/release/filipe-cauduro/csproj-auto-include)](https://github.com/filipe-cauduro/csproj-auto-include/releases/latest)
 
 CSProj Auto Include is a Visual Studio Code (VS Code) extension that automatically maintains explicit file entries in C# MSBuild `.csproj` files. It updates the `<ItemGroup>` entries when you create, copy, move, rename, or delete files in the VS Code Explorer.
 
 It is designed for projects that require explicit file includes, such as legacy .NET Framework projects. Configure the file extensions you want to track in `csproj-auto-include.fileMappings` to get started.
+
+## Requirements
+
+- **Visual Studio Code 1.90 or newer** on Windows, macOS, or Linux. This package is a VS Code extension; the Visual Studio IDE uses a different extension format.
+- A workspace containing a `.csproj` that uses explicit file includes. SDK-style projects normally include files automatically and usually do not need this extension.
+- File mappings configured as shown below. The default mapping is empty.
+
+Node.js, Yarn, and this repository's source code are only needed for development. Users can install the packaged extension directly.
+
+## Installation
+
+### Download from GitHub Releases
+
+1. Open the [latest release](https://github.com/filipe-cauduro/csproj-auto-include/releases/latest).
+2. Under **Assets**, download `csproj-auto-include-<version>.vsix`. The source code ZIP and TAR archives are for development.
+3. In VS Code, open **Extensions** (`Ctrl+Shift+X` on Windows/Linux or `Cmd+Shift+X` on macOS).
+4. Open the **...** menu in the Extensions view, select **Install from VSIX...**, and choose the downloaded file.
+5. Reload VS Code if prompted, then complete the first-time setup below.
+
+You can also install the downloaded package from a terminal:
+
+```sh
+code --install-extension ./csproj-auto-include-1.0.5.vsix
+```
+
+To update a manually installed copy, download the newer VSIX from Releases and repeat these steps.
+
+### VS Code Marketplace
+
+The first Marketplace publication is pending. Until the listing is available, install the VSIX from GitHub Releases using the steps above.
+
+## First-time setup
+
+1. Open the folder containing your C# project or solution in VS Code.
+2. Run **Preferences: Open Workspace Settings (JSON)** from the Command Palette.
+3. Add these settings, merging them with any existing workspace settings:
+
+```json
+{
+    "csproj-auto-include.fileMappings": {
+        ".cs": "Compile"
+    },
+    "csproj-auto-include.blocklist": ["**/obj/**", "**/bin/**"]
+}
+```
+
+4. Create a C# file through the **VS Code Explorer** inside your project folder. Its nearest `.csproj` should receive a `<Compile Include="..." />` entry.
+
+There is no command to run: the extension activates automatically. It reacts to subsequent file operations; it does not import all existing files on installation. Creation, copying, moving, and renaming must happen through VS Code Explorer. Deletions are also tracked on disk.
 
 ## Highlights
 
@@ -68,7 +118,7 @@ Determines whether to show a popup notification whenever a `.csproj` file is suc
 
 ## Testing (Local Development)
 
-Use Node.js 20 or newer and Yarn to install dependencies and run the automated suites:
+Use Node.js 22 LTS and Yarn Classic 1.22 to install dependencies and run the automated suites:
 
 All test sources and runners are written in TypeScript and checked in strict mode. The commands compile them to `.vscode-test/compiled`, which is ignored by Git and excluded from the extension package.
 
@@ -82,7 +132,7 @@ yarn test:stress
 
 - `yarn test` compiles the extension and runs the XML editor unit tests without opening VS Code.
 - `yarn test:integration` tests real VS Code file operations, file mappings, project selection, and the blocklist. It uses the [official VS Code test runner](https://code.visualstudio.com/api/working-with-extensions/testing-extension) and downloads a separate copy of VS Code on its first run.
-- `yarn test:package` checks the VSIX file list, including the compiled entry point, runtime dependencies, and exclusion of test files.
+- `yarn test:package` checks the VSIX file list, exclusion of test files, and that the bundled entry point loads without external runtime packages.
 - `yarn test:stress` checks rapid rename round trips for lost project entries. This is separate because reproducing the filesystem event race depends on timing.
 
 Integration and stress tests use temporary copies of the sample solution and isolated VS Code profiles. Successful runs clean up their temporary files; failed runs print the retained workspace path, which includes `results.json` and VS Code logs. They require a desktop session; on a headless Linux machine, use `xvfb-run -a yarn test:integration` (or `test:stress`).
@@ -93,7 +143,7 @@ Set `VSCODE_TEST_VERSION` to test a specific VS Code version, or set `VSCODE_EXE
 VSCODE_EXECUTABLE_PATH=/usr/share/code/code yarn test:integration
 ```
 
-The suites include regression checks for project-relative blocklists, runtime dependencies in the VSIX, simultaneous file operations, and rapid renames. These commands return a nonzero exit code when a regression is detected; failures are not skipped or marked as expected successes.
+The suites include regression checks for project-relative blocklists, bundled runtime dependencies, simultaneous file operations, and rapid renames. These commands return a nonzero exit code when a regression is detected; failures are not skipped or marked as expected successes.
 
 To run the integration suite against an extracted VSIX, set `CSPROJ_TEST_EXTENSION_PATH` to its `extension` directory. Fixtures and test code still come from this repository.
 
@@ -109,7 +159,17 @@ If you are contributing and made more tests, commit them as well, I would really
 
 **This code was generated using Codex and GPT 6.1 Sol.**
 
-## Packaging and Publishing
+## Troubleshooting
+
+- **Nothing happens:** check that the extension is enabled, your workspace contains a `.csproj`, and `fileMappings` contains the file's extension. Empty mappings track no file types.
+- **A new file is not added:** create it through VS Code Explorer, check your blocklist, and make sure the file is inside the intended project folder.
+- **An existing file is missing from the project:** existing files are not imported automatically; the extension responds to file operations after activation.
+- **The wrong project is updated:** the extension selects the nearest `.csproj` by walking up from the file. Avoid placing multiple project files in the same directory when project selection would be ambiguous.
+- **Installation fails:** check your VS Code version and make sure you downloaded a `.vsix` asset rather than a source archive.
+
+For help or bug reports, [open an issue](https://github.com/filipe-cauduro/csproj-auto-include/issues) with your VS Code version, extension version, settings, and a minimal example of the affected project entries.
+
+## Packaging and publishing (maintainers)
 
 Run the checks and generate the installable package:
 
@@ -121,7 +181,25 @@ yarn test:stress
 yarn package
 ```
 
-The package is written to `dist/csproj-auto-include-<version>.vsix`. Runtime dependencies are included; development dependencies, test sources, and downloaded VS Code instances are excluded.
+The package is written to `dist/csproj-auto-include-<version>.vsix`. esbuild bundles runtime dependencies into `build/extension.js`; development dependencies, test sources, and downloaded VS Code instances are excluded.
+
+### GitHub Releases
+
+The [Release workflow](https://github.com/filipe-cauduro/csproj-auto-include/actions/workflows/release.yml) runs when `package.json` or the release workflow changes on `main`. It can also be started from **Actions > Release > Run workflow** on `main`.
+
+For a new release, update `package.json` and add a matching section to `CHANGELOG.md`, then push the changes to `main`. The workflow installs dependencies from `yarn.lock`, runs unit and package checks, builds the VSIX, runs integration and stress tests against the extracted package, and publishes a `v<version>` GitHub release with the package attached. An already published version is skipped. The release uses the exact commit that passed the checks.
+
+### Visual Studio Marketplace
+
+1. Sign in to [Marketplace publisher management](https://marketplace.visualstudio.com/manage) with your Microsoft account and create or select the publisher whose ID matches `publisher` in `package.json` (`filipe-cauduro`).
+2. Choose **New extension > Visual Studio Code** and upload the tested `dist/csproj-auto-include-1.0.5.vsix`, or download the same asset from the GitHub release. Complete the Marketplace validation and publication flow.
+3. After publication, verify the [extension listing](https://marketplace.visualstudio.com/items?itemName=filipe-cauduro.csproj-auto-include), replace the pending notice above with the Marketplace installation link, and include this command:
+
+```sh
+code --install-extension filipe-cauduro.csproj-auto-include
+```
+
+For later updates, upload the newer tested VSIX through the publisher dashboard. Alternatively, authenticate locally with `yarn vsce login filipe-cauduro` and publish the same package with `yarn vsce publish --packagePath dist/csproj-auto-include-<version>.vsix`. Keep publishing tokens out of Git. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for authentication requirements.
 
 ## License
 
