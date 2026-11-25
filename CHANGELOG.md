@@ -3,6 +3,7 @@
 ## 1.0.6
 
 - Add the extension icon to the VSIX and Marketplace listing.
+- Use a 256x256 PNG within the Marketplace icon size limits and validate its dimensions before packaging.
 - Add the icon and the published Marketplace installation link to the README.
 - Document how to publish updates to the existing Marketplace extension.
 

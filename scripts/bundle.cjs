@@ -2,6 +2,18 @@ const fs = require("node:fs")
 const path = require("node:path")
 const { buildSync } = require("esbuild")
 
+const { icon } = require("../package.json")
+const iconData = fs.readFileSync(icon)
+const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+if (iconData.length < 24 || !iconData.subarray(0, 8).equals(pngSignature)) {
+    throw new Error(`Extension icon must be a PNG: ${icon}`)
+}
+const iconWidth = iconData.readUInt32BE(16)
+const iconHeight = iconData.readUInt32BE(20)
+if (iconWidth !== iconHeight || iconWidth < 128 || iconWidth > 1024) {
+    throw new Error(`Extension icon must be square and between 128 and 1024 pixels; got ${iconWidth}x${iconHeight}`)
+}
+
 const result = buildSync({
     entryPoints: ["src/extension.ts"],
     outfile: "build/extension.js",

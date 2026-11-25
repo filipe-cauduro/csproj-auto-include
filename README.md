@@ -210,6 +210,8 @@ For a new release, update `package.json` and add a matching section to `CHANGELO
 
 The extension's icon is stored at `assets/extension-icon.png` and referenced by the `icon` field in `package.json`. Include the image in the VSIX and publish a new version to update the icon in the Marketplace and VS Code. Changing an Azure DevOps project or publisher avatar does not change this packaged icon. The Marketplace description also comes from the README packaged in that version; a GitHub README edit alone does not update the listing.
 
+Keep the icon square and in PNG format, between 128x128 and 1024x1024 pixels. The current icon is 256x256. The build checks these dimensions and fails before packaging an invalid icon.
+
 Alternatively, authenticate locally with `yarn vsce login filipe-cauduro` and publish the tested package with `yarn vsce publish --packagePath dist/csproj-auto-include-<version>.vsix`. Keep publishing tokens out of Git. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for authentication requirements.
 
 ## License
