@@ -1,9 +1,10 @@
 {
   "name": "csproj-auto-include",
   "displayName": "CSProj Auto Include",
+  "icon": "assets/extension-icon.png",
   "description": "Automatically update explicit .csproj file includes when creating, moving, renaming, or deleting files in VS Code.",
   "publisher": "filipe-cauduro",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "MIT",
   "author": {
     "name": "filipe-cauduro",

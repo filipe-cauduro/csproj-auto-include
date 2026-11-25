@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="assets/extension-icon.png" alt="CSProj Auto Include icon" width="128">
+</p>
+
 <h1 align="center">
 	<br>
 	CSProj Auto Include — VS Code Extension
@@ -5,7 +9,7 @@
 	<br>
 </h1>
 
-[![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)](https://code.visualstudio.com/)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/filipe-cauduro.csproj-auto-include?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=filipe-cauduro.csproj-auto-include)
 [![GitHub release](https://img.shields.io/github/v/release/filipe-cauduro/csproj-auto-include)](https://github.com/filipe-cauduro/csproj-auto-include/releases/latest)
 
 CSProj Auto Include is a Visual Studio Code (VS Code) extension that automatically maintains explicit file entries in C# MSBuild `.csproj` files. It updates the `<ItemGroup>` entries when you create, copy, move, rename, or delete files in the VS Code Explorer.
@@ -33,14 +37,22 @@ Node.js, Yarn, and this repository's source code are only needed for development
 You can also install the downloaded package from a terminal:
 
 ```sh
-code --install-extension ./csproj-auto-include-1.0.5.vsix
+code --install-extension ./csproj-auto-include-1.0.6.vsix
 ```
 
 To update a manually installed copy, download the newer VSIX from Releases and repeat these steps.
 
 ### VS Code Marketplace
 
-The first Marketplace publication is pending. Until the listing is available, install the VSIX from GitHub Releases using the steps above.
+Install [CSProj Auto Include from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=filipe-cauduro.csproj-auto-include), or open **Extensions** in VS Code, search for `filipe-cauduro.csproj-auto-include`, and click **Install**.
+
+You can also install it from a terminal:
+
+```sh
+code --install-extension filipe-cauduro.csproj-auto-include
+```
+
+After installation, complete the first-time setup below. VS Code can update Marketplace installations automatically when extension auto-updates are enabled.
 
 ## First-time setup
 
@@ -191,15 +203,14 @@ For a new release, update `package.json` and add a matching section to `CHANGELO
 
 ### Visual Studio Marketplace
 
-1. Sign in to [Marketplace publisher management](https://marketplace.visualstudio.com/manage) with your Microsoft account and create or select the publisher whose ID matches `publisher` in `package.json` (`filipe-cauduro`).
-2. Choose **New extension > Visual Studio Code** and upload the tested `dist/csproj-auto-include-1.0.5.vsix`, or download the same asset from the GitHub release. Complete the Marketplace validation and publication flow.
-3. After publication, verify the [extension listing](https://marketplace.visualstudio.com/items?itemName=filipe-cauduro.csproj-auto-include), replace the pending notice above with the Marketplace installation link, and include this command:
+1. Increment `version` in `package.json`, update `CHANGELOG.md`, and build and check the new VSIX using the commands above. Each Marketplace update needs a new version number.
+2. Sign in to [Marketplace publisher management](https://marketplace.visualstudio.com/manage) and select **Filipe Cauduro (`filipe-cauduro`)**.
+3. Open the existing **CSProj Auto Include** extension's actions and choose **Update**. Upload `dist/csproj-auto-include-<version>.vsix`, or download the same asset from the GitHub release. Complete the validation and publication flow.
+4. Verify the new version on the [extension listing](https://marketplace.visualstudio.com/items?itemName=filipe-cauduro.csproj-auto-include).
 
-```sh
-code --install-extension filipe-cauduro.csproj-auto-include
-```
+The extension's icon is stored at `assets/extension-icon.png` and referenced by the `icon` field in `package.json`. Include the image in the VSIX and publish a new version to update the icon in the Marketplace and VS Code. Changing an Azure DevOps project or publisher avatar does not change this packaged icon. The Marketplace description also comes from the README packaged in that version; a GitHub README edit alone does not update the listing.
 
-For later updates, upload the newer tested VSIX through the publisher dashboard. Alternatively, authenticate locally with `yarn vsce login filipe-cauduro` and publish the same package with `yarn vsce publish --packagePath dist/csproj-auto-include-<version>.vsix`. Keep publishing tokens out of Git. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for authentication requirements.
+Alternatively, authenticate locally with `yarn vsce login filipe-cauduro` and publish the tested package with `yarn vsce publish --packagePath dist/csproj-auto-include-<version>.vsix`. Keep publishing tokens out of Git. See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for authentication requirements.
 
 ## License
 

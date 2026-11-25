@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+- Add the extension icon to the VSIX and Marketplace listing.
+- Add the icon and the published Marketplace installation link to the README.
+- Document how to publish updates to the existing Marketplace extension.
+
 ## 1.0.5
 
 - Prepare the first public GitHub release with an installable VSIX and installation instructions.
